@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Интерактивная RPG-карта фэнтези-мира. Генерация на шуме Перлина, исследование клеток, ресурсы и квесты." />
+  <title>Атлас Забытых Земель — RPG-карта</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>" />
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="particles" id="particles"></div>
+  </div>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">⚔️</span>
+      <div>
+        <h1 class="brand-title">Атлас Забытых Земель</h1>
+        <p class="brand-sub">Интерактивная карта фэнтези-мира · шум Перлина</p>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill" title="Исследовано клеток">
+        <span class="stat-label">Исследовано</span>
+        <span class="stat-value" id="stat-explored">0</span>
+      </div>
+      <div class="stat-pill" title="Найдено ресурсов">
+        <span class="stat-label">Ресурсы</span>
+        <span class="stat-value" id="stat-resources">0</span>
+      </div>
+      <div class="stat-pill" title="Открыто квестов">
+        <span class="stat-label">Квесты</span>
+        <span class="stat-value" id="stat-quests">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel panel-left">
+      <section class="card">
+        <h2 class="card-title">Мироздание</h2>
+        <label class="field">
+          <span>Семя мира</span>
+          <div class="seed-row">
+            <input type="text" id="seed-input" placeholder="случайное" autocomplete="off" spellcheck="false" />
+            <button type="button" class="btn btn-ghost" id="btn-random-seed" title="Случайное семя">🎲</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Размер карты</span>
+          <select id="map-size">
+            <option value="32">32 × 32</option>
+            <option value="48" selected>48 × 48</option>
+            <option value="64">64 × 64</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Масштаб рельефа</span>
+          <input type="range" id="noise-scale" min="0.03" max="0.15" step="0.005" value="0.07" />
+        </label>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="btn-generate">
+            <span>✨</span> Создать мир
+          </button>
+          <button type="button" class="btn btn-secondary" id="btn-download" disabled>
+            <span>📥</span> Скачать PNG
+          </button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Легенда</h2>
+        <ul class="legend" id="legend">
+          <li><span class="swatch deep"></span> Глубокий океан</li>
+          <li><span class="swatch ocean"></span> Море</li>
+          <li><span class="swatch shore"></span> Побережье</li>
+          <li><span class="swatch plain"></span> Равнины</li>
+          <li><span class="swatch forest"></span> Лес</li>
+          <li><span class="swatch hill"></span> Холмы</li>
+          <li><span class="swatch mountain"></span> Горы</li>
+          <li><span class="swatch snow"></span> Снежные пики</li>
+          <li><span class="swatch fog"></span> Неизведанное</li>
+          <li><span class="swatch explored-mark"></span> Исследовано</li>
+        </ul>
+      </section>
+
+      <section class="card inventory-card">
+        <h2 class="card-title">Сумка исследователя</h2>
+        <ul class="inventory" id="inventory">
+          <li class="inventory-empty">Пока пусто — отправляйтесь в путь</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="map-stage">
+      <div class="map-frame">
+        <div class="map-glow"></div>
+        <canvas id="map-canvas" width="720" height="720" role="img" aria-label="Карта фэнтези-мира"></canvas>
+        <div class="map-overlay-hint" id="map-hint">
+          <p>Нажмите <strong>«Создать мир»</strong>, затем кликайте по клеткам, чтобы исследовать земли.</p>
+        </div>
+      </div>
+      <div class="map-toolbar">
+        <button type="button" class="btn btn-ghost" id="btn-fog-toggle" title="Показать/скрыть туман">🌫️ Туман войны</button>
+        <span class="seed-display" id="seed-display">Семя: —</span>
+      </div>
+    </section>
+
+    <aside class="panel panel-right">
+      <section class="card detail-card" id="detail-panel">
+        <div class="detail-placeholder" id="detail-placeholder">
+          <div class="compass" aria-hidden="true">🧭</div>
+          <h2>Выберите клетку</h2>
+          <p>Кликните по карте, чтобы открыть описание региона, ресурсы и возможные квесты.</p>
+        </div>
+        <div class="detail-content hidden" id="detail-content">
+          <div class="detail-header">
+            <span class="terrain-badge" id="terrain-badge">Равнины</span>
+            <span class="coord" id="cell-coord">[0, 0]</span>
+          </div>
+          <h2 class="region-name" id="region-name">—</h2>
+          <p class="region-desc" id="region-desc"></p>
+          <div class="detail-section" id="resource-section">
+            <h3>Найденные ресурсы</h3>
+            <ul class="loot-list" id="loot-list"></ul>
+          </div>
+          <div class="detail-section" id="quest-section">
+            <h3>Квест</h3>
+            <article class="quest-card" id="quest-card">
+              <h4 id="quest-title"></h4>
+              <p id="quest-text"></p>
+            </article>
+          </div>
+          <button type="button" class="btn btn-primary btn-explore" id="btn-explore">
+            🔍 Исследовать
+          </button>
+          <p class="explore-note" id="explore-note"></p>
+        </div>
+      </section>
+
+      <section class="card log-card">
+        <h2 class="card-title">Хроника странствий</h2>
+        <div class="log" id="event-log">
+          <p class="log-entry muted">Мир ещё не сотворён…</p>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <p>Генерация рельефа — шум Перлина · GitHub Pages ready · © Атлас Забытых Земель</p>
+  </footer>
+
+  <!-- Toast notifications -->
+  <div class="toast-host" id="toast-host" aria-live="polite"></div>
+
+  <!-- Explore result modal -->
+  <div class="modal-backdrop hidden" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-shine"></div>
+      <h2 id="modal-title">Открытие!</h2>
+      <div class="modal-body" id="modal-body"></div>
+      <button type="button" class="btn btn-primary" id="modal-close">Продолжить путь</button>
+    </div>
+  </div>
+
+  <script src="perlin.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
